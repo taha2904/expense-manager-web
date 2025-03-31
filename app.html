@@ -1,0 +1,2893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Modern Expense Manager (Passcode + Responsive UI)</title>
+  <!-- Chart.js for charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /*******************************************************
+     * GLOBAL STYLES & VARIABLES
+     *******************************************************/
+    :root {
+      --primary-color: #4A67EE;
+      --secondary-color: #2B2F4C;
+      --background-color: #f7f9fc;
+      --light-bg: #fff;
+      --text-color: #333;
+      --border-radius: 10px;
+      --transition-speed: 0.3s;
+      --font-stack: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font-stack);
+      background: var(--background-color);
+      color: var(--text-color);
+      overflow-x: hidden;
+    }
+    a, button { cursor: pointer; text-decoration: none; }
+    button, input, select { font-family: inherit; }
+    .hidden { display: none !important; }
+
+    /*******************************************************
+     * DARK MODE
+     *******************************************************/
+    body.dark-mode {
+      --background-color: #1c1c1c;
+      --light-bg: #2b2b2b;
+      --text-color: #f0f0f0;
+      --secondary-color: #1c1c1c;
+    }
+  
+    /* New dark-mode table header styles for visibility */
+    body.dark-mode th {
+      background-color: #2b2b2b;  /* Dark background */
+      color: #f0f0f0;             /* Light text color */
+    }
+
+    /*******************************************************
+     * PASSCODE SCREEN
+     *******************************************************/
+    #passcodeScreen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: var(--background-color);
+    }
+    #passcodeScreen .passcode-card {
+      background: var(--light-bg);
+      padding: 30px;
+      border-radius: var(--border-radius);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      text-align: center;
+      width: 300px;
+    }
+    #passcodeScreen input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 15px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    #passcodeScreen button {
+      margin-top: 15px;
+      background: var(--primary-color);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 20px;
+      font-size: 16px;
+      transition: background var(--transition-speed);
+    }
+    #passcodeScreen button:hover { background: #394fc9; }
+
+    /*******************************************************
+     * MAIN LAYOUT
+     *******************************************************/
+    #mainApp { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 240px;
+      background: var(--secondary-color);
+      color: #fff;
+      padding: 30px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: width var(--transition-speed);
+    }
+    .sidebar h2 { margin-bottom: 30px; font-weight: 600; }
+    .nav-link {
+      width: 100%;
+      padding: 15px 30px;
+      color: #fff;
+      text-decoration: none;
+      font-size: 16px;
+      display: block;
+      transition: background var(--transition-speed);
+      margin-bottom: 5px;
+    }
+    .nav-link.active,
+    .nav-link:hover { background: rgba(255,255,255,0.1); }
+
+    .main-content { flex: 1; display: flex; flex-direction: column; }
+    .top-bar {
+      background: var(--light-bg);
+      padding: 15px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+    }
+    .top-bar .title { font-size: 20px; font-weight: 600; }
+    .top-bar .btn-dark-mode {
+      background: var(--primary-color);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 14px;
+      transition: background var(--transition-speed);
+    }
+    .top-bar .btn-dark-mode:hover { background: #394fc9; }
+
+    .content-wrapper {
+      flex: 1;
+      padding: 30px;
+      overflow-y: auto;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    /*******************************************************
+     * TAB CONTENT
+     *******************************************************/
+    .tab { display: none; }
+    .tab.active { display: block; }
+    .section-title { font-size: 22px; margin-bottom: 20px; font-weight: 600; }
+
+    /*******************************************************
+     * CARDS & TABLES
+     *******************************************************/
+    .cards-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .card {
+      background: var(--light-bg);
+      border-radius: var(--border-radius);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      padding: 20px;
+      flex: 1;
+      min-width: 250px;
+      transition: transform 0.2s;
+    }
+    .card:hover { transform: translateY(-2px); }
+    .card h3 { margin-bottom: 10px; font-weight: 600; }
+    .card p { margin-bottom: 5px; }
+
+    .table-container {
+      background: var(--light-bg);
+      border-radius: var(--border-radius);
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+    table { width: 100%; border-collapse: collapse; min-width: 800px; }
+    th, td {
+      text-align: left;
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+      font-size: 14px;
+    }
+    th {
+      background: #eef0f3;
+      cursor: pointer;
+      user-select: none;
+    }
+    tr.selected { background: rgba(0,0,0,0.05); }
+    tr.no-data td {
+      text-align: center;
+      font-style: italic;
+    }
+
+    /*******************************************************
+     * MODAL
+     *******************************************************/
+    .modal-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+    .modal {
+      background: var(--light-bg);
+      border-radius: var(--border-radius);
+      padding: 20px;
+      width: 400px;
+      max-width: 90%;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+    .modal h2 { margin-bottom: 20px; font-size: 20px; font-weight: 600; }
+    .modal label { font-weight: 500; margin-top: 10px; display: block; }
+    .modal input, .modal select {
+      margin-bottom: 10px;
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .modal .modal-actions { margin-top: 20px; text-align: right; }
+    .btn {
+      border: none;
+      border-radius: var(--border-radius);
+      padding: 10px 16px;
+      font-size: 14px;
+      margin-left: 10px;
+      transition: background var(--transition-speed);
+    }
+    .btn-primary {
+      background: var(--primary-color);
+      color: #fff;
+      font-weight: 500;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .btn-primary:hover { background: #394fc9; }
+    .btn-secondary {
+      background: #ddd;
+      color: #333;
+    }
+    .btn-secondary:hover { background: #ccc; }
+
+    /* Modified button styles for interactive feel */
+    .btn,
+    .btn-primary,
+    .btn-secondary {
+      background-color: var(--background-color); /* Match page background */
+      color: var(--text-color);                   /* Contrasting text */
+      border: 2px solid #fff;                     /* Thick white border */
+      border-radius: 8px;
+      padding: 10px 16px;
+      transition: transform 0.2s, background-color 0.2s;
+    }
+    .btn:hover,
+    .btn-primary:hover,
+    .btn-secondary:hover {
+      transform: scale(1.05);                      /* Slight scale on hover */
+      background-color: #fff;                      /* Switch to white background */
+      color: var(--background-color);              /* Text becomes page background color */
+    }
+
+    /* New rules for light mode (when dark-mode class is not present) */
+    body:not(.dark-mode) .btn,
+    body:not(.dark-mode) .btn-primary,
+    body:not(.dark-mode) .btn-secondary {
+      border-color: #ccc; /* Use #ccc as contrast border in light mode */
+    }
+    body:not(.dark-mode) .btn:hover,
+    body:not(.dark-mode) .btn-primary:hover,
+    body:not(.dark-mode) .btn-secondary:hover {
+      background-color: #f2f2f2; /* Light gray hover background for light mode */
+      color: #000;             /* Set text color explicitly to black */
+    }
+
+    /*******************************************************
+     * REMAINING MONEY CALCULATOR
+     *******************************************************/
+    .calc-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .calc-card {
+      flex: 1;
+      min-width: 280px;
+      background: var(--light-bg);
+      border-radius: var(--border-radius);
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .calc-card h4 { margin-bottom: 10px; font-size: 18px; }
+    .calc-card label { display: block; margin-top: 10px; }
+    .account-balance-input {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .account-balance-input span {
+      width: 80px;
+      display: inline-block;
+    }
+    .calc-card input[type="number"] {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    /*******************************************************
+     * BUDGET TAB
+     *******************************************************/
+    .budget-container {
+      background: var(--light-bg);
+      border-radius: var(--border-radius);
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      max-width: 500px;
+      margin-bottom: 20px;
+    }
+    .budget-container select, .budget-container input[type="number"] {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    /*******************************************************
+     * SETTINGS TAB
+     *******************************************************/
+    .settings-container {
+      background: var(--light-bg);
+      border-radius: var(--border-radius);
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      max-width: 600px;
+      margin-bottom: 20px;
+    }
+    .settings-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .settings-row input {
+      margin-right: 10px;
+      flex: 1;
+    }
+
+    /*******************************************************
+     * STATUS BAR
+     *******************************************************/
+    .status-bar {
+      background: var(--light-bg);
+      padding: 10px 20px;
+      text-align: right;
+      box-shadow: 0 -1px 5px rgba(0,0,0,0.1);
+    }
+
+    /*******************************************************
+     * RESPONSIVE
+     *******************************************************/
+    @media (max-width: 768px) {
+      .sidebar { width: 60px; padding: 20px 0; }
+      .sidebar h2 { display: none; }
+      .nav-link { text-align: center; padding: 10px; font-size: 14px; }
+      .table-container { min-width: 0; overflow-x: auto; }
+    }
+
+    /* New CSS for the collapsible filter controls card */
+    .filter-card {
+      background-color: var(--light-bg);
+      border: 1px solid #ddd;
+      border-radius: var(--border-radius);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 15px;
+      margin-bottom: 20px;
+      display: none; /* Hidden by default */
+    }
+    .filter-card label {
+      font-weight: 500;
+      margin-bottom: 5px;
+      display: block;
+    }
+    /* New CSS for the expense tile cards */
+    #expenseTiles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .expense-tile {
+      background: var(--light-bg);
+      border: 1px solid #ddd;
+      border-radius: var(--border-radius);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      padding: 15px;
+      width: calc(33% - 10px);
+      cursor: pointer;
+      transition: transform 0.2s;
+      position: relative; /* Added for checkbox positioning */
+    }
+    .expense-tile:hover {
+      transform: translateY(-3px);
+    }
+    .expense-tile .tile-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .expense-tile .tile-date {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+    .expense-tile .tile-amount {
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    .expense-tile .tile-badge {
+      background: var(--primary-color);
+      color: #fff;
+      width: 24px;
+      height: 24px;
+      line-height: 24px;
+      text-align: center;
+      border-radius: 50%;
+      font-weight: 600;
+    }
+    /* Hide the expense table by default */
+    #expenseTable {
+      display: none;
+    }
+
+    /* Ensure selected tiles are visually marked, e.g., with a border */
+    .selected-tile {
+      border: 2px solid var(--primary-color);
+    }
+
+    /* New rules for Dashboard cards */
+    #tabDashboard .cards-container .card {
+      /* Match the expense tile look */
+      background: var(--light-bg);
+      border: 1px solid #ddd;
+      border-radius: var(--border-radius);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      padding: 15px;
+      transition: transform 0.2s;
+      /* Ensure consistent spacing, matching expense tile gaps */
+      margin-bottom: 20px;
+    }
+    #tabDashboard .cards-container .card:hover {
+      transform: translateY(-3px);
+    }
+    #tabDashboard .cards-container .card h3 {
+      font-size: 18px; /* Adjust title size similar to tile-title */
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    #tabDashboard .cards-container .card p {
+      font-size: 16px;
+      margin: 0;
+    }
+
+    /* New container to structure the .calc-card content */
+    .calc-card-inner {
+      display: flex;
+      flex-direction: column;
+      gap: 15px; /* spacing between rows */
+    }
+    /* Row layout for each section */
+    .calc-card-inner .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    /* Month Selector styling */
+    .calc-card-inner .month-row label {
+      font-weight: bold;
+      font-size: 14px;
+      margin-right: 8px;
+    }
+    .calc-card-inner .month-row select {
+      font-size: 14px;
+      padding: 5px;
+    }
+    /* Toggle group styling for radio buttons */
+    .calc-card-inner .balance-toggle-row .toggle-group {
+      display: flex;
+      gap: 10px;
+      padding: 5px 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: #f7f9fc;
+    }
+    .calc-card-inner .balance-toggle-row label {
+      font-size: 14px;
+    }
+    /* Input fields container styling */
+    .calc-card-inner .input-group {
+      width: 100%;
+      gap: 15px;
+    }
+    .calc-card-inner .input-box {
+      flex: 1;
+      background: #eef0f3;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    .calc-card-inner .input-box label {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 4px;
+      display: block;
+    }
+    .calc-card-inner .input-box input {
+      width: 100%;
+      padding: 6px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    /* Summary sentence styling */
+    .calc-card-inner .summary-row p {
+      font-size: 16px;
+      font-weight: 500;
+      margin-top: 10px;
+      color: #333;
+    }
+
+    /* Mobile navigation styling using media queries */
+    @media (max-width: 768px) {
+      /* Hide desktop sidebar */
+      .sidebar { display: none; }
+      /* Show the mobile nav bar */
+      #mobileNavBar {
+        display: block;
+        background: var(--secondary-color);
+        color: #fff;
+      }
+      .mobile-nav-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 15px;
+      }
+      .mobile-title {
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .hamburger-menu {
+        background: transparent;
+        border: none;
+        font-size: 24px;
+        color: #fff;
+        cursor: pointer;
+      }
+      #mobileNav {
+        display: none;
+        width: 100%;
+        background: var(--secondary-color);
+      }
+
+      #mobileNav.show {
+        display: flex;
+        flex-direction: column;
+      }
+
+      #mobileNav .nav-link {
+        color: #fff;
+        padding: 15px 20px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        text-decoration: none;
+      }
+
+      #mobileNav .nav-link:hover {
+        background: rgba(255,255,255,0.1);
+      }
+    }
+    @media (min-width: 769px) {
+      /* Hide mobile nav bar on desktop */
+      #mobileNavBar { display: none; }
+    }
+
+    /* Dark Mode button visibility adjustments */
+  
+    /* Desktop view: min-width: 769px */
+    @media (min-width: 769px) {
+      /* Hide mobile nav bar's dark mode button */
+      #mobileNavBar .btn-dark-mode {
+        display: none;
+      }
+      /* Ensure top-bar dark mode button is visible */
+      .top-bar .btn-dark-mode {
+        display: inline-block;
+      }
+    }
+  
+    /* Mobile view: max-width: 768px */
+    @media (max-width: 768px) {
+      /* Hide top-bar dark mode button */
+      .top-bar .btn-dark-mode {
+        display: none;
+      }
+      /* Show mobile nav bar's dark mode button */
+      #mobileNavBar .btn-dark-mode {
+        display: inline-block;
+      }
+    }
+
+    /* Hover effect for mobile dark mode button: slight scale increase */
+    #mobileNavBar .btn-dark-mode:hover {
+      transform: scale(1.1);
+      transition: transform 0.2s ease-in-out;
+    }
+
+    /* NEW: Override .btn-dark-mode styles to remove background and border */
+    .btn-dark-mode {
+      background: none !important; /* Remove any background */
+      border: none !important;     /* Remove any border */
+      padding: 0;                  /* Remove extra padding if desired */
+    }
+
+    /* NEW: Ensure the SVG inside .btn-dark-mode is always outlined by the text color */
+    .btn-dark-mode svg {
+      fill: none;
+      stroke: var(--text-color);
+    }
+
+    /* NEW: In dark mode, enforce that the sun icon stroke uses the contrasting text color */
+    body.dark-mode .btn-dark-mode svg {
+      stroke: var(--text-color);
+    }
+
+    /* NEW: In light mode, force the dark mode toggle icon stroke to white for clearer contrast */
+    body:not(.dark-mode) .btn-dark-mode svg {
+      stroke: #fff !important;
+    }
+
+    /* NEW: Fix Remaining Money Calculator text in dark mode for clear contrast */
+    body.dark-mode .calc-card-inner .summary-row p {
+      color: var(--text-color);
+    }
+
+    /* NEW: Ensure the desktop Dark Mode toggle button text is legible in light mode */
+    body:not(.dark-mode) .top-bar .btn-dark-mode {
+      color: #333 !important;
+    }
+
+    /* Comments:
+       - The first rule guarantees that in dark mode, the summary text color adapts to var(--text-color), which is already set to a light color.
+       - The second rule forces the dark mode toggle button’s text to #333 in light mode, ensuring it stands out against the light background.
+    */
+
+    /* NEW: Force black text for the Remaining Money Calculator in dark mode.
+       This rule targets:
+       - The combined/separate balance toggle labels,
+       - The labels above each input,
+       - The bank account names in separate mode.
+       Reason: The tile features a smaller white tab in dark mode causing the default light text to have insufficient contrast.
+    */
+    body.dark-mode .calc-card .balance-toggle-row label,
+    body.dark-mode .calc-card .input-box label,
+    body.dark-mode .calc-card .account-balance-input span:not(.additional-needed) {
+      color: #000 !important;
+    }
+
+    /* NEW: Light mode color override to replicate Claude.ai's warm theme.
+       These overrides are applied only when dark-mode is not active (body:not(.dark-mode)).
+       - The background color is set to a warm light beige (#FAF6F3).
+       - The text color is set to a muted brown/gray (#625D52) for headings and paragraphs.
+       - The primary color is overridden to a subtle neutral (#EDE8E2) for button backgrounds.
+       - Hover states and borders use a slightly darker accent (#C6B8A9) to maintain visual clarity.
+    */
+    body:not(.dark-mode) {
+      --background-color: #FAF6F3; /* Warm, light beige background */
+      --text-color: #625D52;       /* Muted brown/gray for general text */
+      --primary-color: #EDE8E2;     /* Subtle neutral for button backgrounds */
+    }
+
+    body:not(.dark-mode) .btn,
+    body:not(.dark-mode) .btn-primary,
+    body:not(.dark-mode) .btn-secondary {
+      background-color: var(--primary-color) !important; /* Use neutral button bg */
+      color: var(--text-color) !important;               /* Match text color to overall text */
+      border-color: #C6B8A9 !important;                   /* Darker accent for borders */
+    }
+
+    body:not(.dark-mode) .btn:hover,
+    body:not(.dark-mode) .btn-primary:hover,
+    body:not(.dark-mode) .btn-secondary:hover {
+      background-color: #C6B8A9 !important;              /* Deep accent on hover */
+      color: var(--text-color) !important;
+    }
+
+    /* NEW: Light mode navigation overrides.
+       - For .sidebar: set background to var(--light-bg) and color to var(--text-color).
+       - For .nav-link: force text color to var(--text-color) and on hover, use a subtle accent (#C6B8A9).
+       - For #mobileNavBar and .mobile-nav a.nav-link: similarly set background and text colors for light mode.
+    */
+    body:not(.dark-mode) .sidebar {
+      background-color: var(--light-bg) !important;
+      color: var(--text-color) !important;
+    }
+    body:not(.dark-mode) .nav-link {
+      color: var(--text-color) !important;
+    }
+    body:not(.dark-mode) .nav-link:hover {
+      background: #C6B8A9 !important;
+    }
+    body:not(.dark-mode) #mobileNavBar {
+      background-color: var(--light-bg) !important;
+      color: var(--text-color) !important;
+    }
+    body:not(.dark-mode) #mobileNavBar .mobile-nav a.nav-link {
+      color: var(--text-color) !important;
+    }
+    body:not(.dark-mode) #mobileNavBar .mobile-nav a.nav-link:hover {
+      background: #C6B8A9 !important;
+    }
+
+    /* NEW: Enhanced top bar navigation styles */
+    .top-bar {
+      background: var(--light-bg);
+      padding: 15px 20px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .top-bar-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .top-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .top-bar .title {
+      font-size: 20px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    /* NEW: Top navigation styles */
+    .top-nav {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .top-nav-link {
+      color: var(--text-color);
+      text-decoration: none;
+      padding: 8px 12px;
+      border-radius: var(--border-radius);
+      transition: background-color var(--transition-speed);
+    }
+
+    .top-nav-link:hover,
+    .top-nav-link.active {
+      background: rgba(0,0,0,0.05);
+    }
+
+    /* Dark mode adjustments */
+    body.dark-mode .top-nav-link {
+      color: var(--text-color);
+    }
+
+    body.dark-mode .top-nav-link:hover,
+    body.dark-mode .top-nav-link.active {
+      background: rgba(255,255,255,0.1);
+    }
+
+    /* Update main content to use full width */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .content-wrapper {
+      flex: 1;
+      padding: 30px;
+      overflow-y: auto;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* Mobile navigation styles */
+    .hamburger-menu {
+      display: none;
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: var(--text-color);
+      cursor: pointer;
+      padding: 5px;
+    }
+
+    @media (max-width: 768px) {
+      .hamburger-menu {
+        display: block;
+      }
+
+      .top-nav {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--light-bg);
+        flex-direction: column;
+        padding: 10px 0;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      }
+
+      .top-nav.show {
+        display: flex;
+      }
+
+      .top-nav-link {
+        padding: 12px 20px;
+        width: 100%;
+      }
+
+      .top-bar-content {
+        padding: 0 15px;
+      }
+    }
+
+    /* Mobile navigation styles - UPDATED to prevent duplicate nav bars */
+    @media (max-width: 768px) {
+      /* Hide the desktop navigation and top bar completely in mobile view */
+      .top-bar {
+        display: none !important; /* Force hide top bar on mobile */
+      }
+
+      .top-nav {
+        display: none !important; /* Force hide top navigation on mobile */
+      }
+
+      /* Show mobile navigation bar */
+      #mobileNavBar {
+        display: block;
+        background: var(--secondary-color);
+        color: #fff;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      /* ...rest of existing mobile styles... */
+    }
+
+    /* Ensure desktop navigation is visible above 768px */
+    @media (min-width: 769px) {
+      #mobileNavBar {
+        display: none; /* Hide mobile nav on desktop */
+      }
+
+      .top-bar,
+      .top-nav {
+        display: flex; /* Restore desktop navigation */
+      }
+    }
+
+    /* Dark mode toggle icon visibility rules */
+    .btn-dark-mode {
+      background: none !important;
+      border: none !important;
+      padding: 8px;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+
+    /* Base SVG icon stroke style */
+    .btn-dark-mode svg {
+      fill: none;
+      stroke-width: 2;
+      transition: stroke 0.3s ease;
+    }
+
+    /* Light mode: Dark stroke for contrast against light background */
+    body:not(.dark-mode) .btn-dark-mode svg {
+      stroke: #333 !important; /* Dark gray for visibility on light theme */
+    }
+
+    /* Dark mode: Light stroke for contrast against dark background */
+    body.dark-mode .btn-dark-mode svg {
+      stroke: #fff !important; /* White for visibility on dark theme */
+    }
+
+    /* Hover effect for both modes */
+    .btn-dark-mode:hover {
+      transform: scale(1.1);
+    }
+
+    /* Accent Color (#da7756) Rules
+       Using consistent accent color for interactive elements across both themes */
+
+    /* Navigation hover state - light and dark modes */
+    .top-nav-link:hover,
+    .nav-link:hover,
+    body.dark-mode .top-nav-link:hover,
+    body.dark-mode .nav-link:hover {
+        color: #da7756 !important;
+        background: transparent !important;
+    }
+
+    /* Bank account badge on expense tiles - both modes */
+    .expense-tile .tile-badge {
+        background-color: #da7756 !important;
+        color: #fff !important;
+        /* Keep existing size/position styles */
+    }
+
+    /* Selected tile border - both modes */
+    .expense-tile.selected-tile {
+        border: 2px solid #da7756 !important;
+    }
+
+    /* Ensure mobile navigation also uses accent color */
+    #mobileNav .nav-link:hover {
+        color: #da7756 !important;
+        background: transparent !important;
+    }
+
+    /* Accent Color (#da7756) Rules - Additional Elements
+       Using consistent accent color across both themes for enhanced visual harmony */
+
+    /* 1. Recurring Icon Badge */
+    .expense-tile .recurring-badge,
+    body.dark-mode .expense-tile .recurring-badge {
+        background-color: #da7756 !important;
+        color: #fff !important;
+        top: 5px;
+        right: 5px;
+        position: absolute;
+        border-radius: 50%;
+        width: 16px;
+        height: 16px;
+        font-size: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* 2. Action Buttons Hover State */
+    .btn:hover,
+    .btn-primary:hover,
+    .btn-secondary:hover,
+    body.dark-mode .btn:hover,
+    body.dark-mode .btn-primary:hover,
+    body.dark-mode .btn-secondary:hover {
+        background-color: #da7756 !important;
+        color: #fff !important;
+        transform: scale(1.05); /* Maintain existing scale effect */
+    }
+
+    /* 3. Date Circles in Total Expenses */
+    #dateCircles span {
+        background-color: #da7756 !important;
+        color: #fff !important;
+    }
+
+    /* Additional accent color for consistency */
+    .modal .btn-primary,
+    body.dark-mode .modal .btn-primary {
+        background-color: #da7756 !important;
+        color: #fff !important;
+    }
+
+    /* Button hover styles - Using #da7756 as consistent accent color */
+    .btn:hover,
+    .btn-primary:hover,
+    .btn-secondary:hover,
+    body.dark-mode .btn:hover,
+    body.dark-mode .btn-primary:hover,
+    body.dark-mode .btn-secondary:hover {
+        background-color: #da7756 !important;
+        color: #fff !important;
+        transform: scale(1.05);
+        border-color: #da7756 !important;
+    }
+
+    /* Ensure modal buttons also use the same hover color */
+    .modal .btn:hover,
+    .modal .btn-primary:hover,
+    .modal .btn-secondary:hover {
+        background-color: #da7756 !important;
+        color: #fff !important;
+        border-color: #da7756 !important;
+    }
+
+    /* Override any theme-specific button hover styles */
+    body:not(.dark-mode) .btn:hover,
+    body:not(.dark-mode) .btn-primary:hover,
+    body:not(.dark-mode) .btn-secondary:hover {
+        background-color: #da7756 !important;
+        color: #fff !important;
+    }
+
+    /* Title and Header Color Updates using accent color #da7756 */
+    .top-bar .title,
+    .mobile-title {
+        color: #da7756 !important;
+    }
+
+    /* Tab Section Titles */
+    .section-title {
+        color: #da7756 !important;
+    }
+
+    /* Hamburger Menu Color Fixes */
+    .hamburger-menu {
+        color: #da7756 !important; /* Use accent color for hamburger icon */
+    }
+
+    /* Mobile Navigation Consistency */
+    #mobileNavBar {
+        background-color: var(--light-bg) !important;
+    }
+
+    #mobileNav .nav-link {
+        color: #da7756 !important;
+        border-top: 1px solid rgba(218, 119, 86, 0.1) !important;
+    }
+
+    #mobileNav .nav-link:hover {
+        background: rgba(218, 119, 86, 0.1) !important;
+        color: #da7756 !important;
+    }
+
+    /* Override mobile nav colors in light mode */
+    body:not(.dark-mode) #mobileNavBar,
+    body:not(.dark-mode) #mobileNav {
+        background-color: var(--light-bg) !important;
+    }
+
+    body:not(.dark-mode) #mobileNav .nav-link {
+        color: #da7756 !important;
+    }
+  </style>
+</head>
+<body>
+  <!-- NEW: Mobile Top Navigation Bar -->
+  <div id="mobileNavBar" class="mobile-nav-bar">
+    <div class="mobile-nav-top">
+      <!-- Application title -->
+      <span class="mobile-title">Expense Manager</span>
+      <!-- Hamburger menu icon -->
+      <button id="hamburgerMenu" class="hamburger-menu" onclick="toggleMobileMenu()">☰</button>
+      <!-- Dark mode toggle: replaced text with SVG icon for consistency with desktop view -->
+      <button class="btn-dark-mode" onclick="toggleDarkMode()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+      </button>
+    </div>
+    <!-- Hidden collapsible menu with sidebar links -->
+    <div id="mobileNav" class="mobile-nav">
+      <a href="#" class="nav-link" onclick="switchTab('dashboard'); toggleMobileMenu()">Dashboard</a>
+      <a href="#" class="nav-link" onclick="switchTab('charts'); toggleMobileMenu()">Charts</a>
+      <a href="#" class="nav-link" onclick="switchTab('budget'); toggleMobileMenu()">Budget</a>
+      <a href="#" class="nav-link" onclick="switchTab('expenses'); toggleMobileMenu()">Expenses</a>
+      <a href="#" class="nav-link" onclick="switchTab('settings'); toggleMobileMenu()">Settings</a>
+    </div>
+  </div>
+
+  <!-- PASSCODE SCREEN -->
+  <div id="passcodeScreen" class="hidden">
+    <div class="passcode-card">
+      <h1>Enter Passcode</h1>
+      <p>Please enter your 4-digit or 6-digit passcode:</p>
+      <input type="password" id="passcodeInput" placeholder="#### or ######" />
+      <button onclick="verifyPasscode()">Enter</button>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="mainApp" class="hidden">
+    <!-- Remove the sidebar div completely -->
+        
+    <div class="main-content">
+      <!-- Updated top bar with navigation -->
+      <div class="top-bar">
+        <div class="top-bar-content">
+          <div class="top-bar-left">
+            <button class="hamburger-menu" onclick="toggleMobileMenu()">☰</button>
+            <div class="title">Expense Manager</div>
+          </div>
+          <!-- New horizontal navigation -->
+          <nav class="top-nav">
+            <a href="#" class="top-nav-link active" onclick="switchTab('dashboard')">Dashboard</a>
+            <a href="#" class="top-nav-link" onclick="switchTab('charts')">Charts</a>
+            <a href="#" class="top-nav-link" onclick="switchTab('budget')">Budget</a>
+            <a href="#" class="top-nav-link" onclick="switchTab('expenses')">Expenses</a>
+            <a href="#" class="top-nav-link" onclick="switchTab('settings')">Settings</a>
+          </nav>
+          <!-- Replace text button with SVG icon in desktop view -->
+          <button class="btn-dark-mode" onclick="toggleDarkMode()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Rest of the content remains the same -->
+      <div class="content-wrapper">
+        <!-- EXPENSES TAB -->
+        <div id="tabDashboard" class="tab active">
+          <h2 class="section-title">Dashboard</h2> <!-- Changed from 'Expenses' -->
+          <div class="cards-container">
+            <div class="card">
+              <h3>
+                Total Expenses
+                <!-- Month selector for filtering (values 1-12) -->
+                <select id="filterMonth" onchange="updateMonthlyTotal()" style="font-size:12px; margin-left:10px;">
+                  <option value="1">Jan</option>
+                  <option value="2">Feb</option>
+                  <option value="3">Mar</option>
+                  <option value="4">Apr</option>
+                  <option value="5">May</option>
+                  <option value="6">Jun</option>
+                  <option value="7">Jul</option>
+                  <option value="8">Aug</option>
+                  <option value="9">Sep</option>
+                  <option value="10">Oct</option>
+                  <option value="11">Nov</option>
+                  <option value="12">Dec</option>
+                </select>
+                <!-- Year selector for filtering -->
+                <select id="filterYear" onchange="updateMonthlyTotal()" style="font-size:12px; margin-left:5px;">
+                  <option value="2023">2023</option>
+                  <option value="2024" selected>2024</option>
+                  <option value="2025">2025</option>
+                </select>
+              </h3>
+              <p id="summaryTotal">£0.00</p>
+              <!-- New paragraph to show total for the chosen month/year -->
+              <p id="monthlyTotal" style="font-weight:bold; margin-top:10px;">Monthly Total: £0.00</p>
+              <!-- Container for date circles: each circle represents a day with expenses -->
+              <div id="dateCircles" style="display:flex; gap:5px; margin-top:10px;"></div>
+            </div>
+            <div id="accountExpenseCards">
+              <!-- Account-specific cards will be generated here -->
+            </div>
+          </div>
+
+          <!-- New container for expense tile cards -->
+          <div id="expenseTiles">
+            <!-- JS will populate tile cards -->
+          </div>
+
+          <!-- ACTION BUTTONS: Moved Filter & Search toggle button here -->
+          <div style="margin-top:20px; display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn-primary" onclick="openModalToAdd()">Add Expense</button>
+            <button class="btn-secondary" onclick="removeExpense()">Remove Selected</button>
+            <button class="btn-secondary" onclick="saveData()">Save Data</button>
+            <button class="btn-secondary" onclick="loadData()">Load Data</button>
+          </div>
+
+          <!-- Remaining Money Calculator -->
+          <div class="calc-container">
+            <!-- Updated Remaining Money Calculator tile with improved layout -->
+            <div class="calc-card">
+              <div class="calc-card-inner">  <!-- New container for structured layout -->
+                <!-- New Heading Row -->
+                <div class="row heading-row" style="justify-content:center;">
+                  <h3 style="margin:0; font-size:20px; color:#da7756;">Remaining Money Calculator</h3>
+                </div>
+                <!-- Moved and Prominent Summary Row -->
+                <div class="row summary-row">
+                  <p id="calcSentence" style="font-size:18px; font-weight:bold; text-align:center; margin:10px 0;">
+                    <strong>Summary:</strong> I have £0.00 left, and for the month of January I have expenses of £0.00, so I will have £0.00 left.
+                  </p>
+                </div>
+                <!-- Modified Month Selector Row with inline label and dropdown -->
+                <div class="row month-row" style="justify-content:center; align-items:center; gap:5px;">
+                  <label for="calcMonthSelector" style="margin:0; font-weight:bold; font-size:14px;">Select Month:</label>
+                  <select id="calcMonthSelector" onchange="updateRemainingSentence()" style="font-size:14px; padding:5px;">
+                    <option value="0">January</option>
+                    <option value="1">February</option>
+                    <option value="2">March</option>
+                    <option value="3">April</option>
+                    <option value="4">May</option>
+                    <option value="5">June</option>
+                    <option value="6">July</option>
+                    <option value="7">August</option>
+                    <option value="8">September</option>
+                    <option value="9">October</option>
+                    <option value="10">November</option>
+                    <option value="11">December</option>
+                  </select>
+                <div class="row balance-toggle-row">
+                  <div class="toggle-group">
+                    <label>
+                      <input type="radio" name="balanceType" value="combined" checked onchange="toggleBalanceInputs(); updateRemainingSentence();">
+                      Combined Balance
+                    </label>
+                    <label>
+                      <input type="radio" name="balanceType" value="separate" onchange="toggleBalanceInputs(); updateRemainingSentence();">
+                      Separate Balances
+                    </label>
+                  </div>
+                </div>
+                <!-- Row: Input Fields -->
+                <div class="row input-group">
+                  <div id="combinedInput" class="input-box">
+                    <label>Combined Total Balance</label>
+                    <input type="number" id="combinedBalance" placeholder="e.g. 1000" step="0.01" onchange="updateRemainingSentence()">
+                  </div>
+                  <div id="separateInput" class="input-box" style="display:none;">
+                    <div id="accountsBalanceContainer">
+                      <!-- ...existing code for dynamically generated per-account inputs... -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- ...existing code after Remaining Money Calculator tile... -->
+          </div>
+          <!-- ...existing code after .calc-container... -->
+        </div>
+
+        <!-- CHARTS TAB -->
+        <div id="tabCharts" class="tab">
+          <h2 class="section-title">Charts</h2>
+          <!-- Wrap charts in dashboard-like tiles -->
+          <div class="cards-container">
+            <div class="card" style="width:300px; height:300px; display:flex; align-items:center; justify-content:center;">
+              <canvas id="chartCanvas" style="max-width:100%; max-height:100%;"></canvas>
+            </div>
+            <div class="card" style="width:300px; height:300px; display:flex; align-items:center; justify-content:center;">
+              <canvas id="pieCanvas" style="max-width:100%; max-height:100%;"></canvas>
+            </div>
+            <!-- New Account Comparison card -->
+            <div class="card" style="width:300px; height:300px; display:flex; align-items:center; justify-content:center;">
+              <h3 style="position:absolute; top:5px; left:5px; margin:0; color:#da7756;">Account Comparison</h3>
+              <canvas id="stackedBarCanvas" style="max-width:100%; max-height:100%;"></canvas>
+            </div>
+            <!-- New Scatter Plot card -->
+            <div class="card" style="width:300px; height:300px; display:flex; align-items:center; justify-content:center;">
+              <h3 style="position:absolute; top:5px; left:5px; margin:0; color:#da7756;">Scatter Plot</h3>
+              <canvas id="scatterCanvas" style="max-width:100%; max-height:100%;"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- BUDGET TAB -->
+        <div id="tabBudget" class="tab">
+          <h2 class="section-title">Budget</h2>
+          <div class="budget-container">
+            <label>Select Month:</label>
+            <select id="budgetMonthSelect" onchange="updateBudgetSummary()">
+              <option value="0">January</option>
+              <option value="1">February</option>
+              <option value="2">March</option>
+              <option value="3">April</option>
+              <option value="4">May</option>
+              <option value="5">June</option>
+              <option value="6">July</option>
+              <option value="7">August</option>
+              <option value="8">September</option>
+              <option value="9">October</option>
+              <option value="10">November</option>
+              <option value="11">December</option>
+            </select>
+
+            <label>Select Year:</label>
+            <select id="budgetYearSelect" onchange="updateBudgetSummary()">
+              <option value="2023">2023</option>
+              <option value="2024" selected>2024</option>
+              <option value="2025">2025</option>
+              <option value="2026">2026</option>
+            </select>
+
+            <label>Set Monthly Budget (£):</label>
+            <input type="number" id="monthlyBudget" placeholder="e.g. 2000" step="0.01">
+            <button class="btn-primary" onclick="setBudget()">Set Budget</button>
+            <p id="budgetSummary" style="margin-top:15px;">No budget set.</p>
+          </div>
+        </div>
+
+        <!-- RECURRING TAB -->
+        <div id="tabExpenses" class="tab">
+          <!-- Inserted filter/search UI (permanently visible) -->
+          <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
+            <div style="flex:1; min-width:180px;">
+              <label>Filter Category</label>
+              <select id="filterCategory" onchange="applyFilters()">
+                <option value="All">All</option>
+                <!-- ... dynamically generated options ... -->
+              </select>
+            </div>
+            <div style="flex:1; min-width:180px;">
+              <label>Filter Account</label>
+              <select id="filterAccount" onchange="applyFilters()">
+                <option value="All">All</option>
+                <!-- ... dynamically generated options ... -->
+              </select>
+            </div>
+            <div style="flex:1; min-width:180px;">
+              <label>Date From</label>
+              <input type="date" id="filterDateFrom">
+            </div>
+            <div style="flex:1; min-width:180px;">
+              <label>Date To</label>
+              <input type="date" id="filterDateTo">
+            </div>
+            <div style="margin-left:auto; min-width:200px;">
+              <label>Search</label>
+              <input type="text" id="searchBox" oninput="onSearchChange()">
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; width:100%; margin-top:10px;">
+              <button class="btn-secondary" onclick="applyFilters()">Apply</button>
+              <button class="btn-secondary" onclick="clearFilters()">Clear</button>
+            </div>
+          </div>
+          <!-- Inserted expense table container -->
+          <div class="table-container" id="expenseTableContainer">
+            <table id="expenseTable">
+              <thead>
+                <tr>
+                  <th onclick="sortExpenses('id')">#</th>
+                  <th onclick="sortExpenses('name')">Expense</th>
+                  <th onclick="sortExpenses('date')">Date</th>
+                  <th onclick="sortExpenses('amount_asc')">Amount</th>
+                  <th onclick="sortExpenses('account')">Account</th>
+                  <th onclick="sortExpenses('category')">Category</th>
+                  <th>Tags</th>
+                  <th>Description</th>
+                  <th>Recurring</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Filled dynamically -->
+              </tbody>
+            </table>
+          </div>
+          <!-- Optionally, you can append any other related elements below -->
+          <!-- Existing recurring expenses content (if any) remains unchanged -->
+          <h2 class="section-title">Recurring Expenses</h2>
+          <div class="table-container" id="recurringTableContainer">
+            <table id="recurringTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Expense</th>
+                  <th>Date</th>
+                  <th>Amount</th>
+                  <th>Account</th>
+                  <th>Category</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Filled with recurring expenses -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SETTINGS TAB -->
+        <div id="tabSettings" class="tab">
+          <h2 class="section-title">Settings</h2>
+          <div class="settings-container">
+            <h3>Passcode Settings</h3>
+            <p>Enter a 4-digit or 6-digit passcode:</p>
+            <input type="password" id="newPasscodeInput" placeholder="#### or ######" />
+            <div style="margin-top:10px;">
+              <button class="btn-primary" onclick="setPasscode()">Save Passcode</button>
+              <button class="btn-secondary" onclick="removePasscode()">Remove Passcode</button>
+            </div>
+          </div>
+
+          <div class="settings-container">
+            <h3>Data Management</h3>
+            <button class="btn-secondary" onclick="clearAllExpenses()">Clear All Expenses</button>
+            <button class="btn-secondary" onclick="exportCSV()">Export to CSV</button>
+            <label style="margin-top:10px;">Import from CSV:</label>
+            <input type="file" accept=".csv" onchange="importCSV(event)">
+          </div>
+
+          <div class="settings-container">
+            <h3>Category & Account Management</h3>
+            <!-- CATEGORIES -->
+            <h4>Categories</h4>
+            <div id="categoryList"></div>
+            <div style="display:flex; margin-top:10px;">
+              <input type="text" id="newCategoryInput" placeholder="New category..." style="flex:1; margin-right:10px;">
+              <button class="btn-primary" onclick="addCategory()">Add Category</button>
+            </div>
+            <hr style="margin:20px 0;">
+            <!-- ACCOUNTS -->
+            <h4>Accounts</h4>
+            <div id="accountList"></div>
+            <div style="display:flex; margin-top:10px;">
+              <input type="text" id="newAccountInput" placeholder="New account..." style="flex:1; margin-right:10px;">
+              <button class="btn-primary" onclick="addAccount()">Add Account</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATUS BAR -->
+      <div class="status-bar">
+        <span id="statusLabel">Ready</span>
+        <span id="currencyLabel" style="margin-left:20px;">Currency: GBP</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL BACKDROP -->
+  <div id="modalBackdrop" class="hidden modal-backdrop">
+    <div class="modal">
+      <h2 id="modalTitle">Add Expense</h2>
+      <label>Expense Name:</label>
+      <input type="text" id="modalExpenseName">
+      <label>Date:</label>
+      <input type="date" id="modalExpenseDate">
+      <label>Amount:</label>
+      <input type="number" id="modalExpenseAmount" step="0.01">
+      <label>Account:</label>
+      <select id="modalExpenseAccount"></select>
+      <label>Category:</label>
+      <select id="modalExpenseCategory"></select>
+      <label>Tags (comma separated):</label>
+      <input type="text" id="modalExpenseTags">
+      <label>Description:</label>
+      <input type="text" id="modalExpenseDescription">
+      <!-- Existing recurring checkbox -->
+      <label>
+        <input type="checkbox" id="modalExpenseRecurring"> Recurring
+      </label>
+      <!-- New recurring end date container (visible only if recurring is checked) -->
+      <div id="modalRecurringEndDateContainer" style="display:none; margin-top:10px;">
+        <label>Recurring End Date:</label>
+        <input type="date" id="modalRecurringEndDate">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="confirmModal()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**************************************************************
+     * GLOBAL VARIABLES & STATE
+     **************************************************************/
+    let passcode = localStorage.getItem("app_passcode") || null;
+    let expenses = [
+      { id: 1, expense: "OpenAI+ Subscription", date: "2025-03-01", amount: 19.20, account: "Monzo", category: "Entertainment", tags: ["Subscription", "Technology"], description: "Monthly subscription for OpenAI+", recurring: true },
+      { id: 2, expense: "Monzo Credit Card Payment", date: "2025-03-01", amount: 16.00, account: "Monzo", category: "Housing", tags: ["Payments", "Finance"], description: "Credit card payment", recurring: true },
+      { id: 3, expense: "iPhone 16 Pro Max Installment", date: "2025-03-02", amount: 49.95, account: "Barclays", category: "Shopping", tags: ["Technology", "Phone"], description: "Monthly installment for iPhone", recurring: true },
+      { id: 4, expense: "Xbox Ultimate Subscription", date: "2025-03-05", amount: 20.99, account: "Monzo", category: "Entertainment", tags: ["Gaming", "Subscription"], description: "Xbox Game Pass Ultimate subscription", recurring: true },
+      { id: 5, expense: "Sim Bill", date: "2025-03-05", amount: 7.00, account: "Monzo", category: "Utilities", tags: ["Phone", "Bills"], description: "Monthly phone SIM bill", recurring: true },
+      { id: 6, expense: "Pixel 8 Pro Installment", date: "2025-03-28", amount: 35.38, account: "Barclays", category: "Shopping", tags: ["Technology", "Phone"], description: "Monthly installment for Pixel phone", recurring: true },
+      { id: 7, expense: "HSBC Payment", date: "2025-03-15", amount: 290.00, account: "Barclays", category: "Housing", tags: ["Mortgage", "Bills"], description: "Monthly mortgage payment", recurring: true }
+    ];
+    let selectedExpenseId = null;
+    let isEditMode = false;
+    let editingExpenseIndex = -1;
+    let monthlyBudgetValue = null;
+
+    // Dynamic arrays for categories & accounts
+    let categories = ["Housing", "Transportation", "Food", "Utilities", "Entertainment",
+                      "Health", "Shopping", "Personal", "Education", "Travel", "Other"];
+    let accounts = ["Monzo", "Barclays"];
+
+    // For separate balances, store the user input in an object
+    let accountBalances = {};
+
+    // New global array to track selected expense IDs from tile view.
+    let selectedTileIds = [];
+
+    /**************************************************************
+     * ON LOAD
+     **************************************************************/
+    window.onload = () => { 
+      initApp();
+      // Optionally, set filters to the current month/year if available
+      const now = new Date();
+      document.getElementById("filterMonth").value = (now.getMonth() + 1).toString();
+      document.getElementById("filterYear").value = now.getFullYear().toString();
+      // Immediately update the dashboard using current filter values.
+      updateMonthlyTotal();
+      updateExpenseTiles();
+    };
+
+    /**************************************************************
+     * PASSCODE FUNCTIONS
+     **************************************************************/
+    function initApp() {
+      if (passcode) {
+        document.getElementById("passcodeScreen").classList.remove("hidden");
+        document.getElementById("mainApp").classList.add("hidden");
+      } else {
+        document.getElementById("passcodeScreen").classList.add("hidden");
+        document.getElementById("mainApp").classList.remove("hidden");
+        loadCategoriesAndAccounts();
+        populateSelects();
+        bindKeyboardShortcuts();
+        updateExpenseTable();
+        updateSummary();
+        renderCategoryList();
+        renderAccountList();
+        refreshAccountInputs(); // for separate balances
+      }
+    }
+    function verifyPasscode() {
+      const input = document.getElementById("passcodeInput").value;
+      if (input === passcode) {
+        document.getElementById("passcodeScreen").classList.add("hidden");
+        document.getElementById("mainApp").classList.remove("hidden");
+        loadCategoriesAndAccounts();
+        populateSelects();
+        bindKeyboardShortcuts();
+        updateExpenseTable();
+        updateSummary();
+        renderCategoryList();
+        renderAccountList();
+        refreshAccountInputs();
+      } else {
+        alert("Incorrect passcode");
+      }
+    }
+    function setPasscode() {
+      const newPass = document.getElementById("newPasscodeInput").value;
+      if ((newPass.length === 4 || newPass.length === 6) && /^\d+$/.test(newPass)) {
+        passcode = newPass;
+        localStorage.setItem("app_passcode", newPass);
+        alert("Passcode set successfully!");
+        document.getElementById("newPasscodeInput").value = "";
+      } else {
+        alert("Passcode must be 4 or 6 digits only.");
+      }
+    }
+    function removePasscode() {
+      localStorage.removeItem("app_passcode");
+      passcode = null;
+      alert("Passcode removed.");
+    }
+
+    /**************************************************************
+     * SIDEBAR & TAB SWITCHING
+     **************************************************************/
+    function switchTab(tabId) {
+      // New mapping: dashboard, charts, budget, expenses, settings
+      const tabs = ["dashboard", "charts", "budget", "expenses", "settings"];
+      const navLinks = document.querySelectorAll(".nav-link");
+      navLinks.forEach(link => link.classList.remove("active"));
+      const sidebarLinks = { dashboard: 0, charts: 1, budget: 2, expenses: 3, settings: 4 };
+      navLinks[sidebarLinks[tabId]].classList.add("active");
+      tabs.forEach(t => {
+        // Use new tab container IDs: "tabDashboard" for dashboard and "tabExpenses" for expenses
+        let id = (t === "dashboard") ? "tabDashboard" : (t === "expenses") ? "tabExpenses" : "tab" + capitalize(t);
+        document.getElementById(id).classList.remove("active");
+      });
+      // Activate the selected tab using new IDs.
+      if (tabId === "dashboard") {
+        document.getElementById("tabDashboard").classList.add("active");
+      } else if (tabId === "expenses") {
+        document.getElementById("tabExpenses").classList.add("active");
+      } else {
+        document.getElementById("tab" + capitalize(tabId)).classList.add("active");
+      }
+      if (tabId === "charts") { drawCharts(); drawStackedBarChart(); drawScatterChart(); }
+      if (tabId === "budget") { updateBudgetSummary(); }
+      if (tabId === "expenses") { updateRecurringTable(); }
+    }
+    function capitalize(str) {
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    /**************************************************************
+     * DARK MODE
+     **************************************************************/
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark-mode");
+    }
+
+    /**************************************************************
+     * KEYBOARD SHORTCUTS
+     **************************************************************/
+    function bindKeyboardShortcuts() {
+      document.addEventListener("keydown", (e) => {
+        if (e.ctrlKey && e.key === 's') { e.preventDefault(); saveData(); }
+        if (e.ctrlKey && e.key === 'o') { e.preventDefault(); loadData(); }
+        if (e.ctrlKey && e.key === 'n') { e.preventDefault(); openModalToAdd(); }
+        if (e.ctrlKey && e.key === 'd') { e.preventDefault(); removeExpense(); }
+        if (e.ctrlKey && e.key === 'm') { e.preventDefault(); toggleDarkMode(); }
+        if (e.key === 'Escape') { closeModal(); }
+      });
+    }
+
+    /**************************************************************
+     * EXPENSES: ADD / EDIT / REMOVE
+     **************************************************************/
+    function loadCategoriesAndAccounts() {
+      // Load from localStorage if present
+      const storedCats = localStorage.getItem("categories");
+      const storedAccs = localStorage.getItem("accounts");
+      if(storedCats) { categories = JSON.parse(storedCats); }
+      if(storedAccs) { accounts = JSON.parse(storedAccs); }
+    }
+    function saveCategoriesAndAccounts() {
+      localStorage.setItem("categories", JSON.stringify(categories));
+      localStorage.setItem("accounts", JSON.stringify(accounts));
+    }
+    function populateSelects() {
+      // Category filters
+      const filterCategory = document.getElementById("filterCategory");
+      filterCategory.innerHTML = `<option value="All">All</option>`;
+      // Modal category
+      const modalCategory = document.getElementById("modalExpenseCategory");
+      modalCategory.innerHTML = "";
+
+      categories.forEach(cat => {
+        filterCategory.innerHTML += `<option value="${cat}">${cat}</option>`;
+        modalCategory.innerHTML += `<option value="${cat}">${cat}</option>`;
+      });
+
+      // Account filters
+      const filterAccount = document.getElementById("filterAccount");
+      filterAccount.innerHTML = `<option value="All">All</option>`;
+      const modalAccount = document.getElementById("modalExpenseAccount");
+      modalAccount.innerHTML = "";
+
+      accounts.forEach(acc => {
+        filterAccount.innerHTML += `<option value="${acc}">${acc}</option>`;
+        modalAccount.innerHTML += `<option value="${acc}">${acc}</option>`;
+      });
+    }
+    function openModalToAdd() {
+      isEditMode = false;
+      editingExpenseIndex = -1;
+      selectedExpenseId = null;
+      document.getElementById("modalTitle").innerText = "Add Expense";
+      document.getElementById("modalExpenseName").value = "";
+      document.getElementById("modalExpenseDate").value = "";
+      document.getElementById("modalExpenseAmount").value = "";
+      document.getElementById("modalExpenseAccount").value = accounts[0] || "";
+      document.getElementById("modalExpenseCategory").value = categories[0] || "";
+      document.getElementById("modalExpenseTags").value = "";
+      document.getElementById("modalExpenseDescription").value = "";
+      document.getElementById("modalExpenseRecurring").checked = false;
+      document.getElementById("modalRecurringEndDateContainer").style.display = "none";
+      document.getElementById("modalRecurringEndDate").value = "";
+      document.getElementById("modalBackdrop").classList.remove("hidden");
+    }
+    function openModalToEdit(expense, index) {
+      isEditMode = true;
+      editingExpenseIndex = index;
+      document.getElementById("modalTitle").innerText = "Edit Expense";
+      document.getElementById("modalExpenseName").value = expense.expense;
+      document.getElementById("modalExpenseDate").value = expense.date;
+      document.getElementById("modalExpenseAmount").value = expense.amount;
+      document.getElementById("modalExpenseAccount").value = expense.account;
+      document.getElementById("modalExpenseCategory").value = expense.category;
+      document.getElementById("modalExpenseTags").value = expense.tags.join(", ");
+      document.getElementById("modalExpenseDescription").value = expense.description;
+      document.getElementById("modalExpenseRecurring").checked = expense.recurring;
+      if(expense.recurring && expense.recurringEndDate) {
+        document.getElementById("modalRecurringEndDate").value = expense.recurringEndDate;
+        document.getElementById("modalRecurringEndDateContainer").style.display = "block";
+      } else {
+        document.getElementById("modalRecurringEndDate").value = "";
+        document.getElementById("modalRecurringEndDateContainer").style.display = "none";
+      }
+      document.getElementById("modalBackdrop").classList.remove("hidden");
+    }
+    function closeModal() {
+      document.getElementById("modalBackdrop").classList.add("hidden");
+    }
+    function confirmModal() {
+      const name = document.getElementById("modalExpenseName").value;
+      const date = document.getElementById("modalExpenseDate").value;
+      const amount = parseFloat(document.getElementById("modalExpenseAmount").value);
+      if (!name || !date || isNaN(amount)) {
+        alert("Please fill required fields");
+        return;
+      }
+      // If recurring, read the recurring end date.
+      let recurringEndDate = "";
+      if (document.getElementById("modalExpenseRecurring").checked) {
+        recurringEndDate = document.getElementById("modalRecurringEndDate").value;
+      }
+      if (!isEditMode) {
+        const newExp = {
+          id: expenses.length ? Math.max(...expenses.map(e => e.id)) + 1 : 1,
+          expense: name,
+          date: date,
+          amount: amount,
+          account: document.getElementById("modalExpenseAccount").value,
+          category: document.getElementById("modalExpenseCategory").value,
+          tags: document.getElementById("modalExpenseTags").value.split(",").map(s => s.trim()).filter(s => s),
+          description: document.getElementById("modalExpenseDescription").value,
+          recurring: document.getElementById("modalExpenseRecurring").checked,
+          // Store the recurring end date if provided.
+          recurringEndDate: recurringEndDate
+        };
+        expenses.push(newExp);
+      } else {
+        const exp = expenses[editingExpenseIndex];
+        exp.expense = name;
+        exp.date = date;
+        exp.amount = amount;
+        exp.account = document.getElementById("modalExpenseAccount").value;
+        exp.category = document.getElementById("modalExpenseCategory").value;
+        exp.tags = document.getElementById("modalExpenseTags").value.split(",").map(s => s.trim()).filter(s => s);
+        exp.description = document.getElementById("modalExpenseDescription").value;
+        exp.recurring = document.getElementById("modalExpenseRecurring").checked;
+        // Update the recurringEndDate property based on user input.
+        exp.recurringEndDate = recurringEndDate;
+      }
+      closeModal();
+      updateExpenseTable();
+      updateSummary();
+    }
+
+    // Updated removeExpense() function:
+    function removeExpense() {
+      let recurringDecision = null; // null means not asked yet
+      // Helper to decide recurring deletion:
+      function handleRecurring(expense, expIndex) {
+        const selectedMonth = parseInt(document.getElementById("filterMonth").value, 10) - 1;
+        const selectedYear = parseInt(document.getElementById("filterYear").value, 10);
+        const monthKey = `${selectedYear}-${(selectedMonth+1).toString().padStart(2, '0')}`;
+        if (recurringDecision === null) {
+          recurringDecision = confirm("For recurring expenses, click OK to remove from all months, or Cancel to remove only for the selected month.");
+        }
+        if (recurringDecision) {
+          // Remove entirely – delete from expenses array.
+          expenses.splice(expIndex, 1);
+        } else {
+          // Mark deletion for the current month.
+          if (!expense.removedMonths) { expense.removedMonths = []; }
+          if (!expense.removedMonths.includes(monthKey)) {
+            expense.removedMonths.push(monthKey);
+          }
+        }
+      }
+      
+      if (selectedTileIds.length === 0) {
+        // ...existing table-based deletion code...
+        const table = document.getElementById("expenseTable");
+        const selectedRows = table.querySelectorAll("tbody tr.selected");
+        if (selectedRows.length === 0) {
+          alert("No expense selected for removal.");
+          return;
+        }
+        if (!confirm("Are you sure you want to remove the selected expense(s) for the current month?")) {
+          return;
+        }
+        selectedRows.forEach(row => {
+          const id = parseInt(row.getAttribute("data-id"));
+          const expIndex = expenses.findIndex(e => e.id === id);
+          if (expIndex === -1) return;
+          const expense = expenses[expIndex];
+          if (expense.recurring) {
+            handleRecurring(expense, expIndex);
+          } else {
+            expenses.splice(expIndex, 1);
+          }
+        });
+      } else {
+        if (!confirm("Are you sure you want to remove the selected expense(s) for the current month?")) {
+          return;
+        }
+        const selectedMonth = parseInt(document.getElementById("filterMonth").value, 10) - 1;
+        const selectedYear = parseInt(document.getElementById("filterYear").value, 10);
+        const monthKey = `${selectedYear}-${(selectedMonth+1).toString().padStart(2, '0')}`;
+        selectedTileIds.forEach(id => {
+          const expIndex = expenses.findIndex(e => e.id === id);
+          if (expIndex === -1) return;
+          const expense = expenses[expIndex];
+          if (expense.recurring) {
+            handleRecurring(expense, expIndex);
+          } else {
+            expenses.splice(expIndex, 1);
+          }
+        });
+        selectedTileIds = [];
+      }
+      updateExpenseTable();
+      updateSummary();
+    }
+
+    /**************************************************************
+     * EXPENSE TABLE & SUMMARY
+     **************************************************************/
+    // Modify updateExpenseTable to also update tiles.
+    function updateExpenseTable(data) {
+      const tableBody = document.getElementById("expenseTable").querySelector("tbody");
+      tableBody.innerHTML = "";
+      const list = data || expenses;
+      if (list.length === 0) {
+        const row = document.createElement("tr");
+        row.classList.add("no-data");
+        row.innerHTML = `<td colspan="9">No expenses found</td>`;
+        tableBody.appendChild(row);
+      } else {
+        list.forEach((exp) => {
+          const row = document.createElement("tr");
+          row.setAttribute("data-id", exp.id);
+          row.innerHTML = `
+            <td>${exp.id}</td>
+            <td>${exp.expense}</td>
+            <td>${exp.date}</td>
+            <td>${exp.amount.toFixed(2)}</td>
+            <td>${exp.account}</td>
+            <td>${exp.category}</td>
+            <td>${exp.tags.join(", ")}</td>
+            <td>${exp.description}</td>
+            <td>${exp.recurring ? "Yes" : "No"}</td>
+          `;
+          row.addEventListener("click", () => {
+            const isSelected = row.classList.contains("selected");
+            tableBody.querySelectorAll("tr").forEach(r => r.classList.remove("selected"));
+            if (!isSelected) row.classList.add("selected");
+            selectedExpenseId = exp.id;
+          });
+          row.addEventListener("dblclick", () => {
+            openModalToEdit(exp, expenses.indexOf(exp));
+          });
+          tableBody.appendChild(row);
+        });
+      }
+      // Call new function to update tile view accordingly.
+      updateExpenseTiles();
+    }
+
+    function updateSummary() {
+      // Calculate total expenses
+      const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+      document.getElementById("summaryTotal").innerText = `£${total.toFixed(2)}`;
+
+      // Calculate per-account totals
+      const accountTotals = {};
+      accounts.forEach(acc => {
+        const accTotal = expenses
+          .filter(e => e.account === acc)
+          .reduce((sum, e) => sum + e.amount, 0);
+        accountTotals[acc] = accTotal;
+      });
+
+      // Update or create cards for each account
+      const container = document.getElementById("accountExpenseCards");
+      container.innerHTML = ''; // Clear existing cards
+
+      Object.entries(accountTotals).forEach(([account, amount]) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <h3>${account} Outgoing</h3>
+          <p>£${amount.toFixed(2)}</p>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    /**************************************************************
+     * REMAINING MONEY CALCULATOR
+     **************************************************************/
+    function toggleBalanceInputs() {
+      const balanceType = document.querySelector('input[name="balanceType"]:checked').value;
+      if (balanceType === "combined") {
+        document.getElementById("combinedInput").style.display = "block";
+        document.getElementById("separateInput").style.display = "none";
+      } else {
+        document.getElementById("combinedInput").style.display = "none";
+        document.getElementById("separateInput").style.display = "block";
+        refreshAccountInputs();
+      }
+    }
+    function refreshAccountInputs() {
+      const container = document.getElementById("accountsBalanceContainer");
+      container.innerHTML = "";
+      // For each bank account, create input element and associated display for additional funds.
+      accounts.forEach(acc => {
+        if (!(acc in accountBalances)) {
+          accountBalances[acc] = ""; // default value
+        }
+        // Create a div for the account balance input and message display.
+        const div = document.createElement("div");
+        div.className = "account-balance-input";
+        div.innerHTML = `
+          <span>${acc}:</span>
+          <input type="number" step="0.01" value="${accountBalances[acc]}" 
+                 data-account="${acc}"
+                 oninput="accountBalances['${acc}'] = this.value; updateNeededForAccount('${acc}');" />
+          <span class="additional-needed" id="additionalNeeded-${acc}" style="margin-left:10px;color:red;"></span>
+        `;
+        container.appendChild(div);
+        // Initialize the additional needed message.
+        updateNeededForAccount(acc);
+      });
+    }
+
+    // Modified helper function to update additional needed/surplus message with style changes.
+    function updateNeededForAccount(acc) {
+      // Parse current balance for this account.
+      const accBalance = parseFloat(accountBalances[acc] || "0");
+      // Calculate total expenses for the account.
+      const totalExpenses = expenses
+        .filter(e => e.account === acc)
+        .reduce((sum, e) => sum + e.amount, 0);
+      // Compute remainder: positive means surplus, negative means additional needed.
+      const remainder = accBalance - totalExpenses;
+      // Get the display element.
+      const display = document.getElementById(`additionalNeeded-${acc}`);
+      // Set message and text color based on remainder.
+      if (remainder < 0) {
+        // Insufficient balance: show needed funds in red.
+        display.innerText = "Additional Needed: £" + Math.abs(remainder).toFixed(2);
+        display.style.color = 'red';
+      } else if (remainder > 0) {
+        // Surplus available: show surplus funds in green.
+        display.innerText = "Surplus: £" + remainder.toFixed(2);
+        display.style.color = 'green';
+      } else {
+        // Exact amount; clear the message and color.
+        display.innerText = "";
+        display.style.color = "";
+      }
+    }
+
+    function calculateRemaining() {
+      const balanceType = document.querySelector('input[name="balanceType"]:checked').value;
+      let overall = 0;
+      if (balanceType === "combined") {
+        const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+        const totalBalance = parseFloat(document.getElementById("combinedBalance").value);
+        if (isNaN(totalBalance)) {
+          alert("Please enter a valid total balance.");
+          return;
+        }
+        overall = totalBalance - totalExpenses;
+        document.getElementById("overallRemaining").innerText = `Overall Remaining: £${overall.toFixed(2)}`;
+      } else {
+        // For each account, find total expenses, subtract from user input
+        let sumOfAllAccounts = 0;
+        for(const acc of accounts) {
+          const accBalance = parseFloat(accountBalances[acc] || "0");
+          if(isNaN(accBalance)) {
+            alert(`Please enter a valid balance for ${acc}.`);
+            return;
+          }
+          // sum of expenses for that account
+          const accountExpense = expenses
+            .filter(e => e.account === acc)
+            .reduce((sum, e) => sum + e.amount, 0);
+          const remainder = accBalance - accountExpense;
+          sumOfAllAccounts += remainder;
+        }
+        document.getElementById("overallRemaining").innerText = `Overall Remaining: £${sumOfAllAccounts.toFixed(2)}`;
+      }
+    }
+
+    /**************************************************************
+     * SAVE / LOAD DATA
+     **************************************************************/
+    function saveData() {
+      localStorage.setItem("expenses", JSON.stringify(expenses));
+      alert("Data saved to localStorage!");
+    }
+    function loadData() {
+      const loaded = localStorage.getItem("expenses");
+      if (loaded) {
+        expenses = JSON.parse(loaded);
+        updateExpenseTable();
+        updateSummary();
+        alert("Data loaded from localStorage!");
+      } else {
+        alert("No saved data found.");
+      }
+    }
+
+    /**************************************************************
+     * FILTERS & SEARCH (with Improved Date Filtering)
+     **************************************************************/
+    // Modify applyFilters() to update tile view (tiles will reflect filtered results)
+    function applyFilters() {
+      let filtered = expenses;
+      const cat = document.getElementById("filterCategory").value;
+      const acc = document.getElementById("filterAccount").value;
+      if (cat !== "All") { filtered = filtered.filter(e => e.category === cat); }
+      if (acc !== "All") { filtered = filtered.filter(e => e.account === acc); }
+      const dateFromVal = document.getElementById("filterDateFrom").value;
+      const dateToVal = document.getElementById("filterDateTo").value;
+      if (dateFromVal) {
+        const fromDate = new Date(dateFromVal);
+        filtered = filtered.filter(e => new Date(e.date) >= fromDate);
+      }
+      if (dateToVal) {
+        const toDate = new Date(dateToVal);
+        filtered = filtered.filter(e => new Date(e.date) <= toDate);
+      }
+      updateExpenseTable(filtered);
+    }
+    function clearFilters() {
+      document.getElementById("filterCategory").value = "All";
+      document.getElementById("filterAccount").value = "All";
+      document.getElementById("filterDateFrom").value = "";
+      document.getElementById("filterDateTo").value = "";
+      document.getElementById("searchBox").value = "";
+      updateExpenseTable();
+    }
+    function onSearchChange() {
+      const term = document.getElementById("searchBox").value.toLowerCase();
+      if (term) {
+        const filtered = expenses.filter(e =>
+          e.expense.toLowerCase().includes(term) ||
+          e.description.toLowerCase().includes(term)
+        );
+        updateExpenseTable(filtered);
+      } else {
+        updateExpenseTable();
+      }
+    }
+    function sortExpenses(criterion) {
+      if (criterion === "date") {
+        expenses.sort((a, b) => new Date(a.date) - new Date(b.date));
+      } else if (criterion === "amount_asc") {
+        expenses.sort((a, b) => a.amount - b.amount);
+      } else if (criterion === "amount_desc") {
+        expenses.sort((a, b) => b.amount - a.amount);
+      } else if (criterion === "name") {
+        expenses.sort((a, b) => a.expense.toLowerCase().localeCompare(b.expense.toLowerCase()));
+      } else if (criterion === "category") {
+        expenses.sort((a, b) => a.category.localeCompare(b.category));
+      } else if (criterion === "id") {
+        expenses.sort((a, b) => a.id - b.id);
+      }
+      updateExpenseTable();
+    }
+
+    /**************************************************************
+     * CHARTS TAB: Bar + Pie
+     **************************************************************/
+    // NEW: Helper functions to convert hex <-> HSL and generate shades dynamically.
+    function hexToRgb(hex) {
+      hex = hex.replace(/^#/, '');
+      if (hex.length === 3) {
+        hex = hex.split('').map(c => c + c).join('');
+      }
+      const num = parseInt(hex, 16);
+      return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+    }
+    function rgbToHsl(r, g, b) {
+      r /= 255; g /= 255; b /= 255;
+      let max = Math.max(r, g, b), min = Math.min(r, g, b);
+      let h, s, l = (max + min) / 2;
+      if(max === min){
+          h = s = 0;
+      } else {
+          let d = max - min;
+          s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+          switch(max) {
+            case r: h = ((g - b) / d + (g < b ? 6 : 0)); break;
+            case g: h = ((b - r) / d + 2); break;
+            case b: h = ((r - g) / d + 4); break;
+          }
+          h /= 6;
+      }
+      return { h, s, l };
+    }
+    function hslToRgb(h, s, l) {
+      let r, g, b;
+      if(s === 0){
+        r = g = b = l; 
+      } else {
+        const hue2rgb = (p, q, t) => {
+          if(t < 0) t += 1;
+          if(t > 1) t -= 1;
+          if(t < 1/6) return p + (q - p) * 6 * t;
+          if(t < 1/2) return q;
+          if(t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+          return p;
+        };
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+      }
+      return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+    }
+    function rgbToHex(r, g, b) {
+      const toHex = x => x.toString(16).padStart(2, '0');
+      return "#" + toHex(r) + toHex(g) + toHex(b);
+    }
+    function generateShades(n, baseHex) {
+      const { r, g, b } = hexToRgb(baseHex);
+      const baseHSL = rgbToHsl(r, g, b);
+      let shades = [];
+      // Vary lightness over a range.
+      let delta = 0.5 / (n > 1 ? n - 1 : 1);
+      for (let i = 0; i < n; i++) {
+        // Ensure lightness stays in a reasonable range.
+        let l = Math.min(0.9, Math.max(0.3, baseHSL.l - 0.25 + i * delta));
+        const { r: nr, g: ng, b: nb } = hslToRgb(baseHSL.h, baseHSL.s, l);
+        shades.push(rgbToHex(nr, ng, nb));
+      }
+      return shades;
+    }
+
+    // Modified drawCharts() to use dynamic shades for the pie chart.
+    function drawCharts() {
+      // ...existing Pie Chart data preparation...
+      const categoryData = {};
+      expenses.forEach(exp => {
+        categoryData[exp.category] = (categoryData[exp.category] || 0) + exp.amount;
+      });
+      const pieLabels = Object.keys(categoryData);
+      const pieDataValues = Object.values(categoryData);
+      // Use dynamic shades based on the number of categories.
+      const pieColors = generateShades(pieLabels.length, "#da7756");
+      
+      // ...existing Line Chart code remains unchanged...
+      const currentYear = new Date().getFullYear();
+      const monthlySums = Array(12).fill(0);
+      for (let month = 0; month < 12; month++) {
+        expenses.forEach(exp => {
+          if (exp.recurring) {
+            if (isExpenseActive(exp, currentYear, month)) {
+              monthlySums[month] += exp.amount;
+            }
+          } else {
+            const expDate = new Date(exp.date);
+            if (expDate.getFullYear() === currentYear && expDate.getMonth() === month) {
+              monthlySums[month] += exp.amount;
+            }
+          }
+        });
+      }
+      const lineLabels = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      
+      if (window.myLineChart instanceof Chart) { window.myLineChart.destroy(); }
+      if (window.myPieChart instanceof Chart) { window.myPieChart.destroy(); }
+      
+      const ctxLine = document.getElementById("chartCanvas").getContext("2d");
+      window.myLineChart = new Chart(ctxLine, {
+        type: 'line',
+        data: {
+          labels: lineLabels,
+          datasets: [{
+            label: 'Monthly Expenses (£)',
+            data: monthlySums,
+            borderColor: '#da7756',
+            backgroundColor: 'rgba(218,119,86,0.2)',
+            fill: true,
+            tension: 0.3,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { y: { beginAtZero: true } },
+          plugins: {
+            legend: { display: false },
+            title: { display: true, text: "Monthly Expenses Trend" }
+          }
+        }
+      });
+      
+      const ctxPie = document.getElementById("pieCanvas").getContext("2d");
+      window.myPieChart = new Chart(ctxPie, {
+        type: 'pie',
+        data: {
+          labels: pieLabels,
+          datasets: [{
+            data: pieDataValues,
+            backgroundColor: pieColors
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { title: { display: true, text: "Expenses Distribution by Category" } }
+        }
+      });
+    }
+
+    // Add new function below drawCharts() to render the stacked bar chart.
+    function drawStackedBarChart() {
+      // Prepare labels for the 12 months.
+      const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      // Collect unique accounts.
+      const uniqueAccounts = [...new Set(expenses.map(exp => exp.account))];
+      
+      // Initialize data structure: for each account, an array of length 12 filled with 0.
+      const accountData = {};
+      uniqueAccounts.forEach(acc => {
+        accountData[acc] = Array(12).fill(0);
+      });
+      
+      // Iterate over each expense to add its amount to the corresponding month and account.
+      expenses.forEach(exp => {
+        // For recurring expenses, check if active in the month.
+        const expDate = new Date(exp.date);
+        // For each month, if the expense is active (using isExpenseActive with current year), add amount.
+        for (let m = 0; m < 12; m++) {
+          if (isExpenseActive(exp, new Date(expDate).getFullYear(), m)) {
+            // Use the expense's account and add its amount.
+            accountData[exp.account][m] += exp.amount;
+          }
+        }
+      });
+      
+      // Prepare datasets for Chart.js; assign a complementary color to each account.
+      // For simplicity, use #da7756 for the first account and lighter shades for subsequent ones.
+      const datasets = uniqueAccounts.map((acc, index) => {
+        const baseColor = "#da7756";
+        // Compute a lighter shade by increasing the opacity for each subsequent account.
+        const backgroundColor = index === 0 ? baseColor : Chart.helpers.color(baseColor).alpha(0.5 + (index * 0.1)).rgbString();
+        return {
+          label: acc,
+          data: accountData[acc],
+          backgroundColor: backgroundColor
+        };
+      });
+      
+      // Create (or update) the stacked bar chart.
+      const ctxStacked = document.getElementById("stackedBarCanvas").getContext("2d");
+      if (window.myStackedBarChart instanceof Chart) {
+        window.myStackedBarChart.destroy();
+      }
+      window.myStackedBarChart = new Chart(ctxStacked, {
+        type: 'bar',
+        data: {
+          labels: monthLabels,
+          datasets: datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              stacked: true
+            },
+            y: {
+              stacked: true,
+              beginAtZero: true
+            }
+          },
+          plugins: {
+            title: {
+              display: true,
+              text: "Expenses by Account per Month"
+            }
+          }
+        }
+      });
+      /* 
+        Data Grouping Explanation:
+        - For each of the 12 months, we sum each expense amount under its account.
+        - Expenses are aggregated per account and displayed as a stacked bar where each segment represents the contribution for that account.
+      */
+    }
+
+    // Add this new function below the existing chart functions
+    function drawScatterChart() {
+      // Map each expense to an (x, y) point:
+      // x = day of month (derived from the expense's date)
+      // y = expense amount
+      const dataPoints = expenses.map(exp => {
+        const day = new Date(exp.date).getDate();
+        return { x: day, y: exp.amount };
+      });
+      
+      // Create (or update) the scatter chart using Chart.js with #da7756 as the point color.
+      const ctxScatter = document.getElementById("scatterCanvas").getContext("2d");
+      if (window.myScatterChart instanceof Chart) {
+        window.myScatterChart.destroy();
+      }
+      window.myScatterChart = new Chart(ctxScatter, {
+        type: 'scatter',
+        data: {
+          datasets: [{
+            label: 'Expense Amount vs Day',
+            data: dataPoints,
+            backgroundColor: "#da7756",
+            pointRadius: 5,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              title: { display: true, text: 'Day of Month' },
+              min: 0,
+              max: 31,
+              ticks: { stepSize: 1 }
+            },
+            y: {
+              title: { display: true, text: 'Expense Amount (£)' },
+              beginAtZero: true
+            }
+          },
+          plugins: {
+            title: {
+              display: true,
+              text: 'Scatter Plot: Expense Amount vs Day'
+            },
+            legend: { display: false }
+          }
+        }
+      });
+      /* 
+        Data Explanation:
+        - Each expense is represented as a point where the x-axis shows the day (extracted from the date)
+          and the y-axis displays the expense amount.
+        - This scatter plot uses #da7756 as the primary color to match the overall theme.
+      */
+    }
+
+    /**************************************************************
+     * BUDGET TAB: Month/Year Picker
+     **************************************************************/
+    function setBudget() {
+      const budgetInput = parseFloat(document.getElementById("monthlyBudget").value);
+      if(isNaN(budgetInput)) { alert("Please enter a valid budget."); return; }
+      monthlyBudgetValue = budgetInput;
+      localStorage.setItem("monthlyBudget", monthlyBudgetValue);
+      updateBudgetSummary();
+    }
+    function updateBudgetSummary() {
+      if(monthlyBudgetValue === null) {
+        // Try to load from localStorage
+        const stored = localStorage.getItem("monthlyBudget");
+        if(stored) { monthlyBudgetValue = parseFloat(stored); }
+      }
+      const monthSelect = document.getElementById("budgetMonthSelect");
+      const yearSelect = document.getElementById("budgetYearSelect");
+      const selectedMonth = parseInt(monthSelect.value);
+      const selectedYear = parseInt(yearSelect.value);
+
+      // Filter expenses for that month/year
+      const monthlyTotal = expenses.filter(e => {
+        const expDate = new Date(e.date);
+        return expDate.getFullYear() === selectedYear && expDate.getMonth() === selectedMonth;
+      }).reduce((sum, e) => sum + e.amount, 0);
+
+      if(monthlyBudgetValue !== null) {
+        const remaining = monthlyBudgetValue - monthlyTotal;
+        document.getElementById("budgetSummary").innerText =
+          `Monthly Budget: £${monthlyBudgetValue.toFixed(2)} | ` +
+          `Expenses: £${monthlyTotal.toFixed(2)} | ` +
+          `Remaining: £${remaining.toFixed(2)}`;
+      } else {
+        document.getElementById("budgetSummary").innerText =
+          `No budget set. Total for chosen month: £${monthlyTotal.toFixed(2)}`;
+      }
+    }
+
+    /**************************************************************
+     * RECURRING TAB
+     **************************************************************/
+    function updateRecurringTable() {
+      const recurring = expenses.filter(e => e.recurring);
+      const tbody = document.getElementById("recurringTable").querySelector("tbody");
+      tbody.innerHTML = "";
+      if(recurring.length === 0) {
+        const row = document.createElement("tr");
+        row.classList.add("no-data");
+        row.innerHTML = `<td colspan="7">No recurring expenses found</td>`;
+        tbody.appendChild(row);
+      } else {
+        recurring.forEach(exp => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${exp.id}</td>
+            <td>${exp.expense}</td>
+            <td>${exp.date}</td>
+            <td>${exp.amount.toFixed(2)}</td>
+            <td>${exp.account}</td>
+            <td>${exp.category}</td>
+            <td>${exp.description}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      }
+    }
+
+    /**************************************************************
+     * SETTINGS TAB: Clear All Expenses, CSV Export/Import
+     **************************************************************/
+    function clearAllExpenses() {
+      if(confirm("Are you sure you want to clear all expenses? This cannot be undone.")) {
+        expenses = [];
+        localStorage.removeItem("expenses");
+        updateExpenseTable();
+        updateSummary();
+        alert("All expenses have been cleared.");
+      }
+    }
+    function exportCSV() {
+      if(expenses.length === 0) {
+        alert("No expenses to export.");
+        return;
+      }
+      let csv = "id,expense,date,amount,account,category,tags,description,recurring\n";
+      expenses.forEach(e => {
+        csv += `${e.id},${escapeCSV(e.expense)},${e.date},${e.amount},${escapeCSV(e.account)},${escapeCSV(e.category)},${escapeCSV(e.tags.join("|"))},${escapeCSV(e.description)},${e.recurring}\n`;
+      });
+      const blob = new Blob([csv], {type: "text/csv"});
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "expenses.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+    function escapeCSV(str) {
+      // Simple CSV escaping: wrap in quotes if contains comma or newline
+      if (str.includes(",") || str.includes("\n")) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    }
+    function importCSV(event) {
+      const file = event.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const text = e.target.result;
+        const lines = text.split("\n").map(l => l.trim()).filter(l => l);
+        // First line is header
+        if(lines.length <= 1) {
+          alert("CSV has no data.");
+          return;
+        }
+        // skip header
+        lines.slice(1).forEach(line => {
+          const cols = parseCSVLine(line);
+          if(cols.length >= 9) {
+            const newExp = {
+              id: parseInt(cols[0]),
+              expense: cols[1],
+              date: cols[2],
+              amount: parseFloat(cols[3]),
+              account: cols[4],
+              category: cols[5],
+              tags: cols[6].split("|").filter(t => t),
+              description: cols[7],
+              recurring: (cols[8] === "true")
+            };
+            // If ID is taken, skip or reassign
+            if(expenses.some(e => e.id === newExp.id)) {
+              newExp.id = Math.max(...expenses.map(e => e.id)) + 1;
+            }
+            if(!isNaN(newExp.amount)) {
+              expenses.push(newExp);
+            }
+          }
+        });
+        updateExpenseTable();
+        updateSummary();
+        alert("CSV imported successfully!");
+      };
+      reader.readAsText(file);
+    }
+    function parseCSVLine(line) {
+      // Very basic parse that splits by comma, ignoring advanced quoting
+      // For a more robust parse, handle quotes properly. 
+      // Here we do a simple approach:
+      const arr = [];
+      let current = "";
+      let inQuotes = false;
+      for(let i=0; i<line.length; i++){
+        const char = line[i];
+        if(char === '"' ) {
+          inQuotes = !inQuotes;
+        } else if(char === ',' && !inQuotes){
+          arr.push(current);
+          current = "";
+        } else {
+          current += char;
+        }
+      }
+      arr.push(current);
+      return arr.map(a => a.replace(/^"|"$/g,"")); 
+    }
+
+    /**************************************************************
+     * SETTINGS TAB: Category & Account Management
+     **************************************************************/
+    function renderCategoryList() {
+      const container = document.getElementById("categoryList");
+      container.innerHTML = "";
+      categories.forEach((cat, idx) => {
+        const row = document.createElement("div");
+        row.className = "settings-row";
+        row.innerHTML = `
+          <input type="text" value="${cat}" oninput="categories[${idx}] = this.value" />
+          <button class="btn-secondary" onclick="removeCategory(${idx})">Delete</button>
+        `;
+        container.appendChild(row);
+      });
+    }
+    function removeCategory(index) {
+      categories.splice(index, 1);
+      saveCategoriesAndAccounts();
+      renderCategoryList();
+      populateSelects();
+    }
+    function addCategory() {
+      const input = document.getElementById("newCategoryInput");
+      const val = input.value.trim();
+      if(!val) return;
+      categories.push(val);
+      input.value = "";
+      saveCategoriesAndAccounts();
+      renderCategoryList();
+      populateSelects();
+    }
+
+    function renderAccountList() {
+      const container = document.getElementById("accountList");
+      container.innerHTML = "";
+      accounts.forEach((acc, idx) => {
+        const row = document.createElement("div");
+        row.className = "settings-row";
+        row.innerHTML = `
+          <input type="text" value="${acc}" oninput="accounts[${idx}] = this.value" />
+          <button class="btn-secondary" onclick="removeAccount(${idx})">Delete</button>
+        `;
+        container.appendChild(row);
+      });
+    }
+    function removeAccount(index) {
+      const accName = accounts[index];
+      // Remove all expenses that reference this account? Or keep them but let them become invalid?
+      // We'll keep them for now, but be aware that the user might see an account in old expenses that no longer is in the list.
+      accounts.splice(index, 1);
+      saveCategoriesAndAccounts();
+      renderAccountList();
+      populateSelects();
+      refreshAccountInputs();
+    }
+    function addAccount() {
+      const input = document.getElementById("newAccountInput");
+      const val = input.value.trim();
+      if(!val) return;
+      accounts.push(val);
+      input.value = "";
+      saveCategoriesAndAccounts();
+      renderAccountList();
+      populateSelects();
+      refreshAccountInputs();
+    }
+
+    /**************************************************************
+     * EXTRAS
+     **************************************************************/
+    function exitApp() {
+      alert("Exiting application (not really applicable in a web browser).");
+    }
+
+    // New function: toggle filter controls card visibility
+    function toggleFilterControls() {
+      var card = document.getElementById('filterCard');
+      if (card.style.display === 'none' || card.style.display === '') {
+        card.style.display = 'block';
+      } else {
+        card.style.display = 'none';
+      }
+    }
+
+    // Modified function to update expense tiles: include a checkbox for selection.
+    function updateExpenseTiles() {
+      const container = document.getElementById("expenseTiles");
+      container.innerHTML = "";
+      const selectedMonth = parseInt(document.getElementById("filterMonth").value, 10) - 1;
+      const selectedYear = parseInt(document.getElementById("filterYear").value, 10);
+      selectedTileIds = [];
+      expenses.forEach(exp => {
+        // For recurring expenses, check if active in the selected month.
+        if (exp.recurring && !isExpenseActive(exp, selectedYear, selectedMonth)) {
+          return;
+        }
+        // For non-recurring expenses, ensure date matches selected month/year.
+        if (!exp.recurring) {
+          const expDate = new Date(exp.date);
+          if (expDate.getFullYear() !== selectedYear || expDate.getMonth() !== selectedMonth) {
+            return;
+          }
+        }
+        let badgeLetter = exp.account ? exp.account.charAt(0).toUpperCase() : '?';
+        const titleText = exp.expense;
+        // For recurring expenses, compute the displayed date using the selected year/month and original day-of-month.
+        let displayDate = exp.date;
+        if (exp.recurring) {
+          const originalDay = new Date(exp.date).getDate();
+          const newDate = new Date(selectedYear, selectedMonth, originalDay);
+          // Format newDate as 'yyyy-mm-dd'
+          displayDate = newDate.toISOString().split("T")[0];
+        }
+        const tile = document.createElement("div");
+        tile.className = "expense-tile";
+        tile.style.position = "relative";
+        // Add a title attribute to the bank badge to show the full bank name on hover.
+        const tileBadge = `<div class="tile-badge" title="${exp.account}">${badgeLetter}</div>`;
+        tile.innerHTML = `
+          <div class="tile-title">${titleText}</div>
+          <div class="tile-date">${displayDate}</div>
+          <div class="tile-amount">£${exp.amount.toFixed(2)}</div>
+          ${tileBadge}
+        `;
+        if (exp.recurring) {
+          const recurringBadge = document.createElement("div");
+          recurringBadge.innerText = "R";
+          // Add tooltip for recurring expense
+          recurringBadge.title = "Recurring Expense";
+          recurringBadge.style.position = "absolute";
+          recurringBadge.style.top = "5px";
+          recurringBadge.style.right = "5px";
+          recurringBadge.style.backgroundColor = "#da7756";
+          recurringBadge.style.color = "#fff";
+          recurringBadge.style.borderRadius = "50%";
+          recurringBadge.style.width = "16px";
+          recurringBadge.style.height = "16px";
+          recurringBadge.style.fontSize = "10px";
+          recurringBadge.style.display = "flex";
+          recurringBadge.style.alignItems = "center";
+          recurringBadge.style.justifyContent = "center";
+          tile.appendChild(recurringBadge);
+        }
+        tile.addEventListener("click", function(e) {
+          if (this.classList.contains("selected-tile")) {
+            this.classList.remove("selected-tile");
+            selectedTileIds = selectedTileIds.filter(id => id !== exp.id);
+          } else {
+            this.classList.add("selected-tile");
+            selectedTileIds.push(exp.id);
+          }
+        });
+        tile.addEventListener("dblclick", function(e) {
+          openModalToEdit(exp, expenses.indexOf(exp));
+        });
+        container.appendChild(tile);
+      });
+    }
+
+    /* updateMonthlyTotal:
+     - Reads the selected month (1-12) and year.
+     - For each expense, uses isExpenseActive() to decide if it should be counted for the selected month.
+     - Sums the total amount for active expenses.
+     - Groups expenses by day: for recurring expenses, using the original day-of-month.
+  */
+  function updateMonthlyTotal() {
+    const month = parseInt(document.getElementById("filterMonth").value, 10) - 1;
+    const year = parseInt(document.getElementById("filterYear").value, 10);
+    
+    // Filter expenses based on their active status in the selected month.
+    const activeExpenses = expenses.filter(exp => isExpenseActive(exp, year, month));
+    // Calculate the monthly total by summing each active expense's amount (count only once per month).
+    const total = activeExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+    document.getElementById("monthlyTotal").innerText = `Monthly Total: £${total.toFixed(2)}`;
+
+    // Group active expenses by day (use the original expense day-of-month).
+    const dayTotals = {};
+    activeExpenses.forEach(exp => {
+      // For recurring expenses, assume the expense recurs on the same day-of-month as the start.
+      const d = new Date(exp.date);
+      const day = d.getDate();
+      dayTotals[day] = (dayTotals[day] || 0) + exp.amount;
+    });
+    // Clear previous circles
+    const circlesContainer = document.getElementById("dateCircles");
+    circlesContainer.innerHTML = "";
+    // Create a circle for each day with active expenses.
+    Object.keys(dayTotals).forEach(day => {
+      const circle = document.createElement("span");
+      circle.innerText = day; // Display day number.
+      // Tooltip shows total for that day.
+      circle.title = `Total: £${dayTotals[day].toFixed(2)}`;
+      // Style the circle.
+      circle.style.display = "inline-block";
+      circle.style.width = "25px";
+      circle.style.height = "25px";
+      circle.style.lineHeight = "25px";
+      circle.style.borderRadius = "50%";
+      circle.style.background = "#4A67EE";
+      circle.style.color = "#fff";
+      circle.style.textAlign = "center";
+      circle.style.fontSize = "12px";
+      circle.style.cursor = "default";
+      circlesContainer.appendChild(circle);
+    });
+  }
+
+  // Helper function: check if expense is active in the selected month/year.
+  function isExpenseActive(exp, year, month) {
+  const monthKey = `${year}-${(month+1).toString().padStart(2, '0')}`;
+  if (exp.recurring && exp.removedMonths && exp.removedMonths.includes(monthKey)) {
+    return false;
+  }
+  const startDate = new Date(exp.date);
+  const startYear = startDate.getFullYear();
+  const startMonth = startDate.getMonth();
+  
+  if (!exp.recurring) {
+    return startYear === year && startMonth === month;
+  } else {
+    if (year < startYear || (year === startYear && month < startMonth)) {
+      return false;
+    }
+    if (exp.recurringEndDate) {
+      const endDate = new Date(exp.recurringEndDate);
+      if (new Date(year, month, 1) >= endDate) return false;
+    }
+    return true;
+  }
+}
+
+    // Call updateMonthlyTotal() after expenses are loaded or updated
+    // For example, add the call at the end of updateExpenseTable:
+    const originalUpdateExpenseTable = updateExpenseTable;
+    updateExpenseTable = function(data) {
+      originalUpdateExpenseTable(data);
+      updateMonthlyTotal();
+    };
+
+    // When the recurring checkbox state changes,
+    // show or hide the recurring end date field.
+    document.getElementById("modalExpenseRecurring").addEventListener("change", function() {
+      const container = document.getElementById("modalRecurringEndDateContainer");
+      if (this.checked) {
+        container.style.display = "block";
+      } else {
+        container.style.display = "none";
+        document.getElementById("modalRecurringEndDate").value = ""; // clear if unchecked
+      }
+    });
+
+    // Add event listeners to the month/year selectors to auto-update the dashboard.
+    document.getElementById("filterMonth").addEventListener("change", () => {
+      updateMonthlyTotal();
+      updateExpenseTiles();
+    });
+    document.getElementById("filterYear").addEventListener("change", () => {
+      updateMonthlyTotal();
+      updateExpenseTiles();
+    });
+    
+    /* Comments:
+       - The above listeners ensure that whenever the user changes the month or year,
+         both updateMonthlyTotal() (which recalculates the total expenses and updates the day circles)
+         and updateExpenseTiles() (which regenerates the expense tile view) are called immediately.
+       - Additionally, during page load the filters are set to the current month/year, so the dashboard
+         shows relevant data by default.
+    */
+
+    // updateRemainingSentence:
+    // Determines the available balance based on the selected mode:
+    // • In Combined mode, uses the value from #combinedBalance.
+    // • In Separate mode, sums the per-account balances from accountBalances.
+    // Then calculates the monthly expense total for the selected month (using current year and isExpenseActive()),
+    // and constructs a natural language sentence with the computed remaining balance.
+    function updateRemainingSentence() {
+      // Determine available balance
+      let available = 0;
+      const mode = document.querySelector('input[name="balanceType"]:checked').value;
+      if (mode === "combined") {
+        available = parseFloat(document.getElementById("combinedBalance").value) || 0;
+      } else {
+        available = 0;
+        accounts.forEach(acc => {
+          available += parseFloat(accountBalances[acc] || "0") || 0;
+        });
+      }
+      
+      // Calculate monthly expenses for the selected month using the current year.
+      const calcMonthIndex = parseInt(document.getElementById("calcMonthSelector").value, 10);
+      const currentYear = new Date().getFullYear();
+      const monthlyExpenses = expenses.filter(exp => isExpenseActive(exp, currentYear, calcMonthIndex))
+                                      .reduce((sum, exp) => sum + exp.amount, 0);
+      
+      // Compute remaining balance.
+      const remaining = available - monthlyExpenses;
+      
+      // Map month index to month name.
+      const monthNames = ["January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"];
+      const selectedMonthName = monthNames[calcMonthIndex];
+      
+      // Construct the display sentence.
+      const sentence = `I have £${available.toFixed(2)} left, and for the month of ${selectedMonthName} I have expenses of £${monthlyExpenses.toFixed(2)}, so I will have £${remaining.toFixed(2)} left.`;
+      document.getElementById("calcSentence").innerText = sentence;
+    }
+    
+    // Ensure that updates in separate balances reflect in the sentence:
+    const originalRefreshAccountInputs = refreshAccountInputs;
+    refreshAccountInputs = function() {
+      originalRefreshAccountInputs();
+      updateRemainingSentence();
+    };
+    
+    const originalUpdateNeededForAccount = updateNeededForAccount;
+    updateNeededForAccount = function(acc) {
+      originalUpdateNeededForAccount(acc);
+      updateRemainingSentence();
+    };
+    
+    // Initialize the calculator month selector to the current month.
+    window.addEventListener("load", function(){
+      const calcMonthSelector = document.getElementById("calcMonthSelector");
+      const currentMonth = new Date().getMonth();
+      calcMonthSelector.value = currentMonth;
+      updateRemainingSentence();
+    });
+
+    // NEW: Mobile navigation toggle function
+    function toggleMobileMenu() {      const mobileNav = document.getElementById('mobileNav');
+      if (mobileNav) {
+        mobileNav.classList.toggle('show');
+      }
+    }
+
+    // Modify switchTab to handle new navigation
+    const originalSwitchTab = switchTab;
+    switchTab = function(tabId) {
+      // Remove active class from all nav links
+      document.querySelectorAll('.top-nav-link').forEach(link => {
+        link.classList.remove('active');
+      });
+      
+      // Add active class to clicked link
+      const activeLink = Array.from(document.querySelectorAll('.top-nav-link')).find(
+        link => link.textContent.toLowerCase() === tabId.toLowerCase()
+      );
+      if (activeLink) activeLink.classList.add('active');
+      
+      // Close mobile menu if open
+      const nav = document.querySelector('.top-nav');
+      if (nav.classList.contains('show')) {
+        nav.classList.remove('show');
+      }
+      
+      // Call original switchTab function
+      originalSwitchTab(tabId);
+    };
+  </script>
+</body>
+</html>
